@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
+    <title>Title</title>
 </head>
 <body>
-    <div class="container">
-        <h2>Login</h2>
-        <form method="POST" action="">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Submit</button>
-        </form>
-    </div>
+<div class="container">
+    <h2>Info</h2>
+
+    <ul>
+        <li><strong>Average Rating:</strong> {{ info_dict.avg_rating }}</li>
+        <li><strong>Number of Matches Rated:</strong> {{ info_dict.number_of_matches }}</li>
+    </ul>
+
+
+  <a href="/dashboard">Go Back</a>
+    <a href="/">Logout</a>
     {% if messages %}
         <div>
             {% for message in messages %}
@@ -23,5 +25,6 @@
             {% endfor %}
         </div>
     {% endif %}
+
 </body>
 </html>

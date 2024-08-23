@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
+    <title>Title</title>
 </head>
 <body>
     <div class="container">
-        <h2>Login</h2>
+        <h2>Rate Match Session</h2>
         <form method="POST" action="">
             {% csrf_token %}
             {{ form.as_p }}
             <button type="submit">Submit</button>
         </form>
     </div>
+    <a href="/dashboard">Go Back</a>
+    <a href="/">Logout</a>
     {% if messages %}
         <div>
             {% for message in messages %}
@@ -23,5 +24,6 @@
             {% endfor %}
         </div>
     {% endif %}
+
 </body>
 </html>

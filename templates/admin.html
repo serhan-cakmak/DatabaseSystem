@@ -5,7 +5,26 @@
     <title>Title</title>
 </head>
 <body>
-      <p> Zibabo
-      </p>
+    <div class="container">
+        <h2>Admin</h2>
+        <p>Welcome, {{ user.username }}</p>
+
+        <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}  <!-- Render form fields -->
+        <button type="submit">Submit</button>
+        </form>
+
+        <a href="/">Logout</a>
+    </div>
+        {% if messages %}
+            <div>
+                {% for message in messages %}
+                    <div class="alert {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif}
 </body>
 </html>
