@@ -12,7 +12,7 @@ class admin_form_select(forms.Form):
 
 class coach_form_select(forms.Form):
     table = forms.ChoiceField(
-        choices=[("delete_session", "delete_session"), ("list_stadiums", "list_stadiums"), ("add_match", "add_match")])
+        choices=[("delete_session", "delete_session"), ("list_stadiums", "list_stadiums"), ("add_match", "add_match"), ("add_squad", "add_squad")])
 
 
 class jury_form_select(forms.Form):
@@ -69,3 +69,17 @@ class add_match_form(forms.Form):
 class rate_form(forms.Form):
     session_ID = forms.IntegerField()
     rating = forms.FloatField()
+
+
+class add_squad_form(forms.Form):
+    session_ID = forms.IntegerField()
+    player_name1 = forms.CharField()
+    player_name2 = forms.CharField()
+    player_name3 = forms.CharField()
+    player_name4 = forms.CharField()
+    player_name5 = forms.CharField()
+    player_name6 = forms.CharField()
+
+    @property
+    def player_name_fields(self):
+        return [f'player_name{i + 1}' for i in range(6)]

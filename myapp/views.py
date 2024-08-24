@@ -81,6 +81,8 @@ def dashboard(request):
                     return redirect("list_stadiums")
                 elif table == "add_match":
                     return redirect("add_match")
+                elif table == "add_squad":
+                    return redirect("add_squad")
 
 
         else:
@@ -291,7 +293,8 @@ def add_match(request):
 
                 mycursor = mydb.cursor()
 
-                mycursor.execute("select u.username from user u where u.name=%s and u.surname=%s", (assigned_jury_name, assigned_jury_surname))
+                mycursor.execute("select u.username from user u where u.name=%s and u.surname=%s",
+                                 (assigned_jury_name, assigned_jury_surname))
                 assigned_jury = mycursor.fetchone()
                 if assigned_jury is None:
                     form = add_match_form()
@@ -317,7 +320,9 @@ def add_match(request):
                     messages.error(request, "No team found for this coach")
                     return render(request, 'add_match.html', context)
                 team_ID = team_ID[0]
-                mycursor.execute("insert into matchsession (session_ID, team_ID, stadium_ID, time_slot, `date`, assigned_jury_username) values(%s, %s, %s, %s, %s, %s)", (session_ID, team_ID, stadium_ID, timeslot, date, assigned_jury))
+                mycursor.execute(
+                    "insert into matchsession (session_ID, team_ID, stadium_ID, time_slot, `date`, assigned_jury_username) values(%s, %s, %s, %s, %s, %s)",
+                    (session_ID, team_ID, stadium_ID, timeslot, date, assigned_jury))
                 mydb.commit()
                 mycursor.close()
                 messages.success(request, "Match added successfully")
@@ -342,11 +347,14 @@ def add_match(request):
 def get_info(request):
     username = request.session.get("username")
     mycursor = mydb.cursor()
-    mycursor.execute("select avg(rating), count(*) from matchsession m where m.assigned_jury_username=%s and m.rating is not null", (username,))
+    mycursor.execute(
+        "select avg(rating), count(*) from matchsession m where m.assigned_jury_username=%s and m.rating is not null",
+        (username,))
     info = mycursor.fetchone()
     info_dict = {"avg_rating": info[0], "number_of_matches": info[1]}
 
     return render(request, 'get_info.html', {"info_dict": info_dict})
+
 
 def rate(request):
     if request.method == "POST":
@@ -359,10 +367,13 @@ def rate(request):
                 username = request.session.get("username")
 
                 mycursor = mydb.cursor()
-                mycursor.execute("update matchsession m set m.rating=%s where session_ID=%s and m.rating is null and  m.date < %s and m.assigned_jury_username = %s", (rating, session_ID, current_date, username))
+                mycursor.execute(
+                    "update matchsession m set m.rating=%s where session_ID=%s and m.rating is null and  m.date < %s and m.assigned_jury_username = %s",
+                    (rating, session_ID, current_date, username))
                 mydb.commit()
                 mycursor.close()
-                messages.success(request, "Rating added successfully if the jury was assigned to the match. Otherwise, the rating haven't been modified.")
+                messages.success(request,
+                                 "Rating added successfully if the jury was assigned to the match. Otherwise, the rating haven't been modified.")
                 return redirect("dashboard")
             except Exception as e:
                 form = rate_form()
@@ -374,5 +385,74 @@ def rate(request):
         context = {"form": form}
         return render(request, 'rate.html', context)
 
+def add_squad(request):
+    if request.method == "POST":
+        form = add_squad_form(request.POST)
+        if form.is_valid():
+            try:
+                session_ID = form.cleaned_data["session_ID"]
+                player_list = [form.cleaned_data[field] for field in form.player_name_fields]
+                date = datetime.now().date()
 
+                mycursor = mydb.cursor()
+                mycursor.execute(
+                    "select t.team_ID from team t where t.coach_username=%s and t.contract_start < %s and t.contract_finish > %s",
+                    (request.session.get("username"), date, date))
+                team_ID = mycursor.fetchone()
+                if team_ID is None:
+                    form = add_match_form()
+                    context = {"form": form}
+                    messages.error(request, "No team found for this coach")
+                    return render(request, 'add_match.html', context)
+                team_ID = team_ID[0]
+                mycursor.execute(
+                    "select s.session_ID from matchsession s where s.session_ID=%s and s.team_ID=%s",
+                    (session_ID, team_ID))
+                session = mycursor.fetchone()
+                if session is None:
+                    form = add_squad_form()
+                    context = {"form": form}
+                    messages.error(request, "Session does not exist")
+                    return render(request, 'add_squad.html', context)
 
+                for player in player_list:
+                    mycursor.execute("select u.username from user u where u.name=%s", (player,))
+                    player_username = mycursor.fetchone()
+                    if player_username is None:
+                        form = add_squad_form()
+                        context = {"form": form}
+                        messages.error(request, "Unknown user.")
+                        return render(request, 'add_squad.html', context)
+                    player_username = player_username[0]
+                    #made sure that player plays in that team
+                    mycursor.execute("select p.team  from playerteams p where p.username=%s and p.team=%s", (player_username,team_ID))
+                    player_team = mycursor.fetchone()
+                    if player_team is None:
+                        form = add_squad_form()
+                        context = {"form": form}
+                        messages.error(request, "Player does not play in this team.")
+                        return render(request, 'add_squad.html', context)
+                    mycursor.execute("select p.position from playerpositions p where p.username=%s limit 1", (player_username,))
+                    player_position = mycursor.fetchone()[0]
+
+                    mycursor.execute("insert into sessionsquads (played_player_username, session_ID, position_id) values(%s, %s, %s)", (player_username, session_ID, player_position))
+
+                mydb.commit()
+                mycursor.close()
+                messages.success(request, "Squad added successfully")
+                return redirect("dashboard")
+            except Exception as e:
+                print(e)
+                form = add_squad_form()
+                context = {"form": form}
+                messages.error(request, "Something is wrong. Please try again.")
+                return render(request, 'add_squad.html', context)
+        else:
+            form = add_squad_form()
+            context = {"form": form}
+            messages.error(request, "Invalid form")
+            return render(request, 'add_squad.html', context)
+    else:
+        form = add_squad_form()
+        context = {"form": form}
+        return render(request, 'add_squad.html', context)
