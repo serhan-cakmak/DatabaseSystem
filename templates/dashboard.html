@@ -6,15 +6,14 @@
 </head>
 <body>
      <div class="container">
-        <h2>Dashboard</h2>
-        <p>Welcome, {{ user.username }}</p>
+        <h1>Dashboard</h1>
+        <h3>Welcome back <b>{{name}}</b> </h3>
 
         <form method="POST">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Submit</button>
         </form>
-
         <a href="/">Logout</a>
     </div>
      {% if messages %}

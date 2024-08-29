@@ -7,6 +7,14 @@
 <body>
    <div class="container">
         <h2>Add Squad</h2>
+        <p>You can choose the players from the dropdown menu.</p>
+       <p> Last player can play in any position</p>
+
+    <ul>
+        {% for id, position in positions %}
+            <li>ID: {{ id }}, Position: {{ position }}</li>
+        {% endfor %}
+    </ul>
         <form method="POST" action="">
             {% csrf_token %}
             {{ form.as_p }}

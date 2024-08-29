@@ -7,25 +7,25 @@ class user_form(forms.Form):
 
 
 class admin_form_select(forms.Form):
-    table = forms.ChoiceField(choices=[("add", "add"), ("update", "update")])
+    Options = forms.ChoiceField(choices=[("add", "add"), ("update", "update")])
 
 
 class coach_form_select(forms.Form):
-    table = forms.ChoiceField(
+    Options = forms.ChoiceField(
         choices=[("delete_session", "delete_session"), ("list_stadiums", "list_stadiums"), ("add_match", "add_match"), ("add_squad", "add_squad")])
 
 
 class jury_form_select(forms.Form):
-    table = forms.ChoiceField(choices=[("get_info", "get_info"), ("rate", "rate")])
+    Options = forms.ChoiceField(choices=[("get_info", "get_info"), ("rate", "rate")])
 
 
 class admin_form_add(forms.Form):
-    table = forms.ChoiceField(choices=[("player", "player"), ("coach", "coach"), ("jury", "jury")])
+    Options = forms.ChoiceField(choices=[("player", "player"), ("coach", "coach"), ("jury", "jury")])
 
 
 class add_player_form(forms.Form):
     username = forms.CharField()
-    password = forms.CharField()
+    password = forms.CharField(widget=forms.PasswordInput)
     name = forms.CharField()
     surname = forms.CharField()
     date_of_birth = forms.DateField()
@@ -35,7 +35,7 @@ class add_player_form(forms.Form):
 
 class add_coach_form(forms.Form):
     username = forms.CharField()
-    password = forms.CharField()
+    password = forms.CharField(widget=forms.PasswordInput)
     name = forms.CharField()
     surname = forms.CharField()
     nationality = forms.CharField()
@@ -43,7 +43,7 @@ class add_coach_form(forms.Form):
 
 class add_jury_form(forms.Form):
     username = forms.CharField()
-    password = forms.CharField()
+    password = forms.CharField(widget=forms.PasswordInput)
     name = forms.CharField()
     surname = forms.CharField()
     nationality = forms.CharField()
@@ -83,3 +83,27 @@ class add_squad_form(forms.Form):
     @property
     def player_name_fields(self):
         return [f'player_name{i + 1}' for i in range(6)]
+
+
+class add_playertosession_form(forms.Form):
+    session_ID = forms.ChoiceField(choices=[])
+    Position1 = forms.ChoiceField(choices=[])
+    Position2 = forms.ChoiceField(choices=[])
+    Position3 = forms.ChoiceField(choices=[])
+    Position4 = forms.ChoiceField(choices=[])
+    Position5 = forms.ChoiceField(choices=[])
+    Position6 = forms.ChoiceField(choices=[])
+
+    def __init__(self, choices):
+        super().__init__()
+        self.fields['session_ID'].choices = choices[0]
+        self.fields['Position1'].choices = choices[1]
+        self.fields['Position2'].choices = choices[2]
+        self.fields['Position3'].choices = choices[3]
+        self.fields['Position4'].choices = choices[4]
+        self.fields['Position5'].choices = choices[5]
+        self.fields['Position6'].choices = choices[6]
+
+    @property
+    def player_name_fields(self):
+        return [f'Position{i}' for i in range(6)]

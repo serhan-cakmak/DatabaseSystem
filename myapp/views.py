@@ -57,24 +57,27 @@ def home(request):
 
 
 def dashboard(request):
+    name = request.session.get("username")
+    context = {"name": name}
+
     if request.session.get("role") == "admin":
         if request.method == "POST":
             form = admin_form_select(request.POST)
             if form.is_valid():
-                table = form.cleaned_data["table"]
+                table = form.cleaned_data["Options"]
                 if table == "add":
                     return redirect("add")
                 elif table == "update":
                     return redirect("update")
         else:
             form = admin_form_select()
-            context = {"form": form}
+            context["form"] = form
             return render(request, 'dashboard.html', context)
     if request.session.get("role") == "coach":
         if request.method == "POST":
             form = coach_form_select(request.POST)
             if form.is_valid():
-                table = form.cleaned_data["table"]
+                table = form.cleaned_data["Options"]
                 if table == "delete_session":
                     return redirect("delete_session")
                 elif table == "list_stadiums":
@@ -87,21 +90,21 @@ def dashboard(request):
 
         else:
             form = coach_form_select()
-            context = {"form": form}
+            context["form"] = form
             return render(request, 'dashboard.html', context)
 
     if request.session.get("role") == "jury":
         if request.method == "POST":
             form = jury_form_select(request.POST)
             if form.is_valid():
-                table = form.cleaned_data["table"]
+                table = form.cleaned_data["Options"]
                 if table == "get_info":
                     return redirect("get_info")
                 elif table == "rate":
                     return redirect("rate")
         else:
             form = jury_form_select()
-            context = {"form": form}
+            context["form"] = form
             return render(request, 'dashboard.html', context)
     # return render(request, 'dashboard.html')
 
@@ -110,7 +113,7 @@ def add(request):
     if request.method == "POST":
         form = admin_form_add(request.POST)
         if form.is_valid():
-            table = form.cleaned_data["table"]
+            table = form.cleaned_data["Options"]
             if table == "player":
                 return redirect("add_player")
             elif table == "coach":
@@ -385,6 +388,7 @@ def rate(request):
         context = {"form": form}
         return render(request, 'rate.html', context)
 
+
 def add_squad(request):
     if request.method == "POST":
         form = add_squad_form(request.POST)
@@ -424,18 +428,22 @@ def add_squad(request):
                         messages.error(request, "Unknown user.")
                         return render(request, 'add_squad.html', context)
                     player_username = player_username[0]
-                    #made sure that player plays in that team
-                    mycursor.execute("select p.team  from playerteams p where p.username=%s and p.team=%s", (player_username,team_ID))
+                    # made sure that player plays in that team
+                    mycursor.execute("select p.team  from playerteams p where p.username=%s and p.team=%s",
+                                     (player_username, team_ID))
                     player_team = mycursor.fetchone()
                     if player_team is None:
                         form = add_squad_form()
                         context = {"form": form}
                         messages.error(request, "Player does not play in this team.")
                         return render(request, 'add_squad.html', context)
-                    mycursor.execute("select p.position from playerpositions p where p.username=%s limit 1", (player_username,))
+                    mycursor.execute("select p.position from playerpositions p where p.username=%s limit 1",
+                                     (player_username,))
                     player_position = mycursor.fetchone()[0]
 
-                    mycursor.execute("insert into sessionsquads (played_player_username, session_ID, position_id) values(%s, %s, %s)", (player_username, session_ID, player_position))
+                    mycursor.execute(
+                        "insert into sessionsquads (played_player_username, session_ID, position_id) values(%s, %s, %s)",
+                        (player_username, session_ID, player_position))
 
                 mydb.commit()
                 mycursor.close()
@@ -453,6 +461,32 @@ def add_squad(request):
             messages.error(request, "Invalid form")
             return render(request, 'add_squad.html', context)
     else:
-        form = add_squad_form()
-        context = {"form": form}
+        options = []
+        mycursor = mydb.cursor()
+        mycursor.execute("select * from position")
+        positions = mycursor.fetchall()
+        positions = [(position[0], position[1]) for position in positions]
+
+        mycursor.execute("select t.team_ID from team t where t.coach_username=%s", (request.session.get("username"),))
+        team_ID = mycursor.fetchone()[0]
+        mycursor.execute("select s.session_ID from matchsession s  join team t on s.team_ID=t.team_ID where t.coach_username=%s",
+                         (request.session.get("username"),))
+        sessions = mycursor.fetchall()
+        sessions = [(session[0],session[0] )for session in sessions]
+        options.append(sessions)
+        for i in range(6):
+            if i == 5:
+                mycursor.execute("select u.username from user u join playerteams p on u.username=p.username where p.team=%s", (team_ID,))
+                players = mycursor.fetchall()
+                players = [(player[0], player[0]) for player in players]
+                options.append(players)
+                break
+            mycursor.execute("select u.username from user u join playerteams p on u.username=p.username join playerpositions pp on pp.username = u.username where p.team=%s and pp.position=%s ", (team_ID,i))
+            players = mycursor.fetchall()
+            players = [(player[0], player[0]) for player in players]
+            options.append(players)
+        print(options)
+        form = add_playertosession_form(options)
+
+        context = {"form": form, "positions": positions}
         return render(request, 'add_squad.html', context)
