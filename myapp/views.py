@@ -390,14 +390,24 @@ def rate(request):
 
 
 def add_squad(request):
+    options, positions = get_options_for_add_squad(request.session.get("username"))
     if request.method == "POST":
-        form = add_squad_form(request.POST)
+        form = add_playertosession_form(request.POST)
+        form.set_dropdown(options)
         if form.is_valid():
             try:
+                print("burda")
                 session_ID = form.cleaned_data["session_ID"]
                 player_list = [form.cleaned_data[field] for field in form.player_name_fields]
+                if len(set(player_list)) != len(player_list):
+                    form = add_playertosession_form()
+                    form.set_dropdown(options)
+                    context = {"form": form, "positions": positions}
+                    messages.error(request, "Duplicate players found")
+                    return render(request, 'add_squad.html', context)
                 date = datetime.now().date()
 
+                print("burda2")
                 mycursor = mydb.cursor()
                 mycursor.execute(
                     "select t.team_ID from team t where t.coach_username=%s and t.contract_start < %s and t.contract_finish > %s",
@@ -405,7 +415,7 @@ def add_squad(request):
                 team_ID = mycursor.fetchone()
                 if team_ID is None:
                     form = add_match_form()
-                    context = {"form": form}
+                    context = {"form": form, "positions": positions}
                     messages.error(request, "No team found for this coach")
                     return render(request, 'add_match.html', context)
                 team_ID = team_ID[0]
@@ -415,16 +425,19 @@ def add_squad(request):
                 session = mycursor.fetchone()
                 if session is None:
                     form = add_squad_form()
-                    context = {"form": form}
+                    context = {"form": form, "positions": positions}
                     messages.error(request, "Session does not exist")
                     return render(request, 'add_squad.html', context)
 
+                player_position = 0
                 for player in player_list:
+                    print(player)
                     mycursor.execute("select u.username from user u where u.name=%s", (player,))
                     player_username = mycursor.fetchone()
+                    print(player_username, "player_username")
                     if player_username is None:
-                        form = add_squad_form()
-                        context = {"form": form}
+                        form = add_playertosession_form()
+                        context = {"form": form, "positions": positions}
                         messages.error(request, "Unknown user.")
                         return render(request, 'add_squad.html', context)
                     player_username = player_username[0]
@@ -433,60 +446,73 @@ def add_squad(request):
                                      (player_username, team_ID))
                     player_team = mycursor.fetchone()
                     if player_team is None:
-                        form = add_squad_form()
-                        context = {"form": form}
+                        form = add_playertosession_form()
+                        context = {"form": form, "positions": positions}
                         messages.error(request, "Player does not play in this team.")
                         return render(request, 'add_squad.html', context)
                     mycursor.execute("select p.position from playerpositions p where p.username=%s limit 1",
                                      (player_username,))
-                    player_position = mycursor.fetchone()[0]
+                    if player_position == 5:
+                        player_position = mycursor.fetchone()[0]
 
                     mycursor.execute(
                         "insert into sessionsquads (played_player_username, session_ID, position_id) values(%s, %s, %s)",
                         (player_username, session_ID, player_position))
 
+                    player_position += 1
                 mydb.commit()
                 mycursor.close()
                 messages.success(request, "Squad added successfully")
                 return redirect("dashboard")
             except Exception as e:
                 print(e)
-                form = add_squad_form()
-                context = {"form": form}
+                form = add_playertosession_form()
+                form.set_dropdown(options)
+                context = {"form": form, "positions": positions}
                 messages.error(request, "Something is wrong. Please try again.")
                 return render(request, 'add_squad.html', context)
         else:
-            form = add_squad_form()
-            context = {"form": form}
+            form = add_playertosession_form()
+            form.set_dropdown(options)
+            context = {"form": form, "positions": positions}
             messages.error(request, "Invalid form")
             return render(request, 'add_squad.html', context)
     else:
-        options = []
-        mycursor = mydb.cursor()
-        mycursor.execute("select * from position")
-        positions = mycursor.fetchall()
-        positions = [(position[0], position[1]) for position in positions]
-
-        mycursor.execute("select t.team_ID from team t where t.coach_username=%s", (request.session.get("username"),))
-        team_ID = mycursor.fetchone()[0]
-        mycursor.execute("select s.session_ID from matchsession s  join team t on s.team_ID=t.team_ID where t.coach_username=%s",
-                         (request.session.get("username"),))
-        sessions = mycursor.fetchall()
-        sessions = [(session[0],session[0] )for session in sessions]
-        options.append(sessions)
-        for i in range(6):
-            if i == 5:
-                mycursor.execute("select u.username from user u join playerteams p on u.username=p.username where p.team=%s", (team_ID,))
-                players = mycursor.fetchall()
-                players = [(player[0], player[0]) for player in players]
-                options.append(players)
-                break
-            mycursor.execute("select u.username from user u join playerteams p on u.username=p.username join playerpositions pp on pp.username = u.username where p.team=%s and pp.position=%s ", (team_ID,i))
-            players = mycursor.fetchall()
-            players = [(player[0], player[0]) for player in players]
-            options.append(players)
         print(options)
-        form = add_playertosession_form(options)
+        form = add_playertosession_form()
+        form.set_dropdown(options)
 
         context = {"form": form, "positions": positions}
         return render(request, 'add_squad.html', context)
+
+
+def get_options_for_add_squad(username):
+    options = []
+    mycursor = mydb.cursor()
+    mycursor.execute("select * from position")
+    positions = mycursor.fetchall()
+    positions = [(position[0], position[1]) for position in positions]
+
+    mycursor.execute("select t.team_ID from team t where t.coach_username=%s", (username,))
+    team_ID = mycursor.fetchone()[0]
+    mycursor.execute(
+        "select s.session_ID from matchsession s  join team t on s.team_ID=t.team_ID where t.coach_username=%s",
+        (username,))
+    sessions = mycursor.fetchall()
+    sessions = [(session[0], session[0]) for session in sessions]
+    options.append(sessions)
+    for i in range(6):
+        if i == 5:
+            mycursor.execute(
+                "select u.name from user u join playerteams p on u.username=p.username where p.team=%s", (team_ID,))
+            players = mycursor.fetchall()
+            players = [(player[0], player[0]) for player in players]
+            options.append(players)
+            break
+        mycursor.execute(
+            "select u.name from user u join playerteams p on u.username=p.username join playerpositions pp on pp.username = u.username where p.team=%s and pp.position=%s ",
+            (team_ID, i))
+        players = mycursor.fetchall()
+        players = [(player[0], player[0]) for player in players]
+        options.append(players)
+    return options, positions

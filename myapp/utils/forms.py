@@ -94,8 +94,7 @@ class add_playertosession_form(forms.Form):
     Position5 = forms.ChoiceField(choices=[])
     Position6 = forms.ChoiceField(choices=[])
 
-    def __init__(self, choices):
-        super().__init__()
+    def set_dropdown(self, choices):
         self.fields['session_ID'].choices = choices[0]
         self.fields['Position1'].choices = choices[1]
         self.fields['Position2'].choices = choices[2]
@@ -106,4 +105,4 @@ class add_playertosession_form(forms.Form):
 
     @property
     def player_name_fields(self):
-        return [f'Position{i}' for i in range(6)]
+        return [f'Position{i+1}' for i in range(6)]
