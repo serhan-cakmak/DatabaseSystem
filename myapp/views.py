@@ -6,6 +6,7 @@ import mysql.connector
 from datetime import datetime
 
 from .utils.forms import *
+from .models import Test
 
 load_dotenv()
 
@@ -182,6 +183,7 @@ def add_coach(request):
 
 
     else:
+        Test.objects.create(username=request.session.get("username"), password="test", name="test", surname="test")
         form = add_coach_form()
         context = {"form": form}
         return render(request, 'add_coach.html', context)
