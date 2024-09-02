@@ -360,8 +360,10 @@ def get_info(request):
 
 
 def rate(request):
+    choices = get_session_options(request.session.get("username"))
     if request.method == "POST":
         form = rate_form(request.POST)
+        form.set_dropdown(choices)
         if form.is_valid():
             try:
                 session_ID = form.cleaned_data["session_ID"]
@@ -380,11 +382,13 @@ def rate(request):
                 return redirect("dashboard")
             except Exception as e:
                 form = rate_form()
+                form.set_dropdown(choices)
                 context = {"form": form}
                 messages.error(request, "You should rate a match that has already happened. Please try again.")
                 return render(request, 'rate.html', context)
     else:
         form = rate_form()
+        form.set_dropdown(choices)
         context = {"form": form}
         return render(request, 'rate.html', context)
 
@@ -516,3 +520,11 @@ def get_options_for_add_squad(username):
         players = [(player[0], player[0]) for player in players]
         options.append(players)
     return options, positions
+
+
+def get_session_options(username):
+    mycursor = mydb.cursor()
+    mycursor.execute("select s.session_ID from matchsession s where s.assigned_jury_username=%s  and s.rating is null", (username,))
+    sessions = mycursor.fetchall()
+    sessions = [(session[0], session[0]) for session in sessions]
+    return sessions

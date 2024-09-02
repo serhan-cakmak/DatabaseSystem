@@ -67,8 +67,11 @@ class add_match_form(forms.Form):
 
 
 class rate_form(forms.Form):
-    session_ID = forms.IntegerField()
+    session_ID = forms.ChoiceField(choices=[])
     rating = forms.FloatField()
+
+    def set_dropdown(self, choices):
+        self.fields['session_ID'].choices = choices
 
 
 class add_squad_form(forms.Form):
